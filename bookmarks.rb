@@ -46,40 +46,46 @@ end
 
 include Bookmarks
 
-OK = 200
-CREATED = 201
 ACCEPTED = 202
-NON_AUTHORITATIVE_INFORMATION = 203
-NO_CONTENT = 204
-RESET_CONTENT = 205
-PARTIAL_CONTENT = 206
-MOVED_PERMANENTLY = 301
+BAD_REQUEST = 400
+CREATED = 201
+FORBIDDEN = 403
 FOUND = 302
+INTERNAL = 500
+MOVED_PERMANENTLY = 301
+NON_AUTHORITATIVE_INFORMATION = 203
+NOT_ACCEPTABLE = 406
+NOT_ALLOWED = 405
+NOT_FOUND = 404
+NO_CONTENT = 204
+OK = 200
+PARTIAL_CONTENT = 206
+PROXY_AUTHENTICATE_REQUIRED = 407
+RESET_CONTENT = 205
 SEE_OTHER = 303
 TEMPORARY_REDIRECT = MOVED_TEMPORARILY = 307
-BAD_REQUEST = 400
 UNAUTHORIZED = 401
-FORBIDDEN = 403
-NOT_FOUND = 404
-PROXY_AUTHENTICATE_REQUIRED = 407
-INTERNAL = 500
+UNAVAILABLE = 503
 
 STATUS_CODE_MAP = {
-	OK => 'OK',
+	BAD_REQUEST => 'Bad Request',
 	CREATED => "Created",
+	FOUND => 'Found',
+	INTERNAL => 'Internal Server Error',
+	MOVED_PERMANENTLY => 'Moved Permanently',
+	MOVED_TEMPORARILY => 'Temporary Redirect',
 	NON_AUTHORITATIVE_INFORMATION => "Non-Authoritative Information",
 	NO_CONTENT => "No Content",
-	RESET_CONTENT => "Reset Content",
+	OK => 'OK',
 	PARTIAL_CONTENT => "Partial Content",
-	MOVED_PERMANENTLY => 'Moved Permanently',
-	FOUND => 'Found',
+	RESET_CONTENT => "Reset Content",
 	SEE_OTHER => 'See Other',
 	TEMPORARY_REDIRECT => 'Temporary Redirect',
-	MOVED_TEMPORARILY => 'Temporary Redirect',
-	BAD_REQUEST => 'Bad Request',
-	INTERNAL => 'Internal Server Error',
   FORBIDDEN => "Forbidden",
+  NOT_ACCEPTABLE => "Not Acceptable",
+  NOT_ALLOWED => "Method Not Allowed",
   NOT_FOUND => "Not Found",
+  UNAVAILABLE => "Service Unavailable",
 }
 
 # only test links if a last run.json doens't exist, just parse the data
@@ -107,8 +113,8 @@ when true
     end
   end
 
-  puts "===== Working ===== "
-  while pool.queue_length > 0
+  puts "===== Working ====="
+  while !bar.complete?
    sleep 1
   end
 
@@ -126,16 +132,6 @@ when false
 end
 
 
-# Testing code
-codes = results.collect do |n|
-  n[:code]
-end.uniq
-
-puts codes
-
-
-
-
 counts = results.reduce(Hash.new(0)) do |s,n|  
   s[n[:code]] += 1
   s
@@ -143,9 +139,9 @@ end
 
 table = TTY::Table.new(header: ['Response', 'Count']) do |t|
   counts.each do |k,v|
-    t << [STATUS_CODE_MAP[k],v]
+    t << [ (STATUS_CODE_MAP[k] ? "#{STATUS_CODE_MAP[k]} (#{k})" : "Unknown Code (#{k})") ,v]
   end
 end
 
 
-table.display
+puts table.render(:unicode, width: 80)
