@@ -66,32 +66,37 @@ SEE_OTHER = 303
 TEMPORARY_REDIRECT = MOVED_TEMPORARILY = 307
 UNAUTHORIZED = 401
 UNAVAILABLE = 503
+DNS_ERROR = 666666
 
 STATUS_CODE_MAP = {
-	BAD_REQUEST => 'Bad Request',
-	CREATED => "Created",
-	FOUND => 'Found',
-	INTERNAL => 'Internal Server Error',
-	MOVED_PERMANENTLY => 'Moved Permanently',
-	MOVED_TEMPORARILY => 'Temporary Redirect',
-	NON_AUTHORITATIVE_INFORMATION => "Non-Authoritative Information",
-	NO_CONTENT => "No Content",
-	OK => 'OK',
-	PARTIAL_CONTENT => "Partial Content",
-	RESET_CONTENT => "Reset Content",
-	SEE_OTHER => 'See Other',
-	TEMPORARY_REDIRECT => 'Temporary Redirect',
+  BAD_REQUEST => 'Bad Request',
+  CREATED => "Created",
+  FOUND => 'Found',
+  INTERNAL => 'Internal Server Error',
+  MOVED_PERMANENTLY => 'Moved Permanently',
+  MOVED_TEMPORARILY => 'Temporary Redirect',
+  NON_AUTHORITATIVE_INFORMATION => "Non-Authoritative Information",
+  NO_CONTENT => "No Content",
+  OK => 'OK',
+  PARTIAL_CONTENT => "Partial Content",
+  RESET_CONTENT => "Reset Content",
+  SEE_OTHER => 'See Other',
+  TEMPORARY_REDIRECT => 'Temporary Redirect',
   FORBIDDEN => "Forbidden",
   NOT_ACCEPTABLE => "Not Acceptable",
   NOT_ALLOWED => "Method Not Allowed",
   NOT_FOUND => "Not Found",
   UNAVAILABLE => "Service Unavailable",
+  DNS_ERROR => "DNS Lookup Failed",
 }
 
 # only test links if a last run.json doens't exist, just parse the data
 test =  !File.exist?("last_run.json")
 page = load_bookmarks 'safaribookmarks.html'
+
 links = get_links(:safari, page)
+
+#links = links.slice(0,50)
 
 
 bar = TTY::ProgressBar.new("Testing #{links.size} Bookmarks [:bar]", total: links.size)
@@ -101,19 +106,21 @@ when true
   # Set up some tables for storing info 
   results = Concurrent::Array.new
 
-  puts "Testing bookmarks..."
-
-
   pool = Concurrent::FixedThreadPool.new(Concurrent::processor_count)  
   
   links.each do |link|
     pool.post do 
-      results << { link: link, code: Unirest.get(link).code }
+      #puts "#{pool.scheduled_task_count} - #{pool.completed_task_count} - #{link}"
+      begin
+	code = Unirest.get(link).code
+	results << { link: link, code: code }
+      rescue SocketError  
+	results << {link: link, code: 666666}
+      end
       bar.advance
     end
   end
 
-  puts "===== Working ====="
   while !bar.complete?
    sleep 1
   end
