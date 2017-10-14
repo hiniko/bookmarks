@@ -4,7 +4,7 @@
 #
 require 'rubygems'
 require 'nokogiri'
-require 'unirest'
+require 'httparty'
 require 'tty'
 require 'concurrent'
 require 'pry'
@@ -96,28 +96,30 @@ page = load_bookmarks 'safaribookmarks.html'
 
 links = get_links(:safari, page)
 
-#links = links.slice(0,50)
+links = links.slice(1,100)
 
 
-bar = TTY::ProgressBar.new("Testing #{links.size} Bookmarks [:bar]", total: links.size)
+bar = TTY::ProgressBar.new("Testing Bookmarks (:current/#{links.size}) [:bar] ", head: '>>', total: links.size)
 
 case test
 when true
   # Set up some tables for storing info 
   results = Concurrent::Array.new
 
-  pool = Concurrent::FixedThreadPool.new(Concurrent::processor_count)  
+  pool = Concurrent::FixedThreadPool.new(Concurrent::processor_count, max_queue: 1000)  
   
   links.each do |link|
     pool.post do 
       #puts "#{pool.scheduled_task_count} - #{pool.completed_task_count} - #{link}"
       begin
-	code = Unirest.get(link).code
+	code = HTTParty.head(link, timeout: 5, follow_redirects: true)
+	puts "got link #{link}"
 	results << { link: link, code: code }
       rescue SocketError  
 	results << {link: link, code: 666666}
       end
       bar.advance
+      bar.log("(#{bar.current}) " + link)
     end
   end
 
